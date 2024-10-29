@@ -1,0 +1,17 @@
+---
+- name: Copy Mozilla Firefox Developer Edition desktop shortcut
+  become: true
+  become_user: "{{ username }}"
+  vars:
+    task_name: "---> Copying Mozilla Firefox DevEdition desktop shortcut..."
+  block:
+    - name: "{{ task_name }}"
+      when: os_type == "ubuntu"
+      ansible.builtin.command: |
+        sudo cp Firefox-dev.desktop /usr/share/applications/
+      state: present
+
+    - name: Notify about copying Mozilla Firefox DevEdition desktop shortcut
+      when: os_type == "ubuntu"
+      ansible.builtin.debug:
+        msg: "Copying Mozilla Firefox DevEdition desktop shortcut completed."

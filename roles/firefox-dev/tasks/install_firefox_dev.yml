@@ -1,0 +1,33 @@
+---
+- name: Install Mozilla Firefox Developer Browser.
+  become: true
+  become_user: "{{ username }}"
+  vars:
+    task_name: "---> Installing Mozilla Firefox Developer Browser..."
+  block:
+    - name: "{{ task_name }}"
+      when: os_type == "arch"
+      ansible.builtin.command: yay -S --noconfirm Firefox
+      state: present
+
+    - name: "{{ task_name }}"
+      when: os_type == "macos"
+      community.general.homebrew_cask:
+        name: firefox@developer-edition
+        state: present
+
+    - name: "{{ task_name }}"
+      when: os_type == "ubuntu"
+      ansible.builtin.command: |
+        sudo ln -s /opt/firefox/firefox /usr/local/bin/firefox-dev
+      state: present
+
+    - name: "{{ task_name }}"
+      when: os_type == "windows"
+      win_chocolatey:
+        name: firefox-dev
+        state: present
+
+    - name: Notify about Mozilla Firefox Developer installation
+      ansible.builtin.debug:
+        msg: "Mozilla Firefox Developer browser installation completed."

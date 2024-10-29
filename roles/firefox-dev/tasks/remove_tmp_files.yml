@@ -1,0 +1,17 @@
+---
+- name: Remove temporary files
+  become: true
+  become_user: "{{ username }}"
+  vars:
+    task_name: "---> Removing temporary files..."
+  block:
+    - name: "{{ task_name }}"
+      when: os_type == "ubuntu"
+      ansible.builtin.apt: |
+        rm -r Firefox-dev.tar.bz2
+      state: present
+
+    - name: Notify about removing temporary files
+      when: os_type in ["arch", "ubuntu"]
+      ansible.builtin.debug:
+        msg: "Removing Mozilla Firefox Developer temporary files completed."

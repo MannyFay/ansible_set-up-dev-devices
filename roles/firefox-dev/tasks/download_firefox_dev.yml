@@ -1,0 +1,19 @@
+---
+- name: Download Firefox Developer Edition browser.
+  become: true
+  become_user: "{{ username }}"
+  vars:
+    task_name: "---> Downloading Firefox Developer Edition..."
+  block:
+    - name: "{{ task_name }}"
+      when: os_type == "ubuntu"
+      ansible.builtin.command: |
+        wget \
+        "https://download.mozilla.org/?product=firefox-devedition-latest \
+        -ssl&os=linux64&lang=en-US" -O Firefox-dev.tar.bz2
+      state: present
+
+    - name: Notify about Mozilla Firefox Developer Edition download
+      when: os_type == "ubuntu"
+      ansible.builtin.debug:
+        msg: "Mozilla Firefox Developer Edition download completed."

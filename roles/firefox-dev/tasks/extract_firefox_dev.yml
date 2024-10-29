@@ -1,0 +1,17 @@
+---
+- name: Extract Firefox Developer Edition
+  become: true
+  become_user: "{{ username }}"
+  vars:
+    task_name: "---> Extracting Firefox Developer Edition..."
+  block:
+    - name: "{{ task_name }}"
+      when: os_type == "ubuntu"
+      ansible.builtin.command: |
+        sudo tar xjf Firefox-dev.tar.bz2 -C /opt/
+      state: present
+
+    - name: Notify about extracting Firefox Developer Edition
+      when: os_type == "ubuntu"
+      ansible.builtin.debug:
+        msg: "Extracting Firefox Developer Edition completed."

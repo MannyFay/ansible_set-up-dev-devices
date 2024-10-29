@@ -1,0 +1,16 @@
+---
+- name: Set up Mozilla Firefox Developer browser.
+  become: true
+  become_user: "{{ username }}"
+  ansible.builtin.include_tasks: "{{ item }}"
+  with_items:
+    - download_firefox_dev.yml
+    - extract_firefox_dev.yml
+    - remove_tmp_files.yml
+    - install_firefox_dev.yml
+    - copy_desktop_shortcut.yml
+
+  block:
+    - name: Notify about Mozilla Firefox Developer browser setup
+      ansible.builtin.debug:
+        msg: "Mozilla Firefox Developer browser setup completed."
