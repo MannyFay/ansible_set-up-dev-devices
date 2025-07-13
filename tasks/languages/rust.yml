@@ -1,114 +1,54 @@
-- name: Install Rust
+- name: Rust - Check if Rust is already installed
   become: true
-  apt:
-    name: ["rustc", "cargo"]
+  become_user: "{{ username }}"
+  command: rustc --version
+  register: rust_check
+  failed_when: false
+  changed_when: false
   tags:
     - install
     - languages
     - rust
 
+- name: Rust - Download and install Rustup
+  become: true
+  become_user: "{{ username }}"
+  shell: |
+    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+  args:
+    creates: "{{ ansible_env.HOME }}/.cargo/bin/rustc"
+  environment:
+    HOME: "{{ ansible_env.HOME }}"
+  when: rust_check.rc != 0
+  tags:
+    - install
+    - languages
+    - rust
 
+- name: Rust - Add Cargo to PATH in .bashrc
+  become: true
+  become_user: "{{ username }}"
+  lineinfile:
+    path: "{{ ansible_env.HOME }}/.bashrc"
+    line: 'export PATH="$HOME/.cargo/bin:$PATH"'
+    insertafter: EOF
+    create: yes
+  when: rust_check.rc != 0
+  tags:
+    - install
+    - languages
+    - rust
 
-# - name: "Rust | Clone"
-#   ansible.builtin.git:
-#     repo: "https://github.com/rust-lang/rust.git"
-#     dest: "{{ lookup('env', 'HOME') }}/rust"
-#     # version: "{{ rust_version }}"
-#     # clone: yes
-#   tags:
-#     - install
-#     - languages
-#     - rust
-
-
-# - name: "Rust | Build"
-#   become_user: "{{ username }}"
-#   shell: "cd {{ lookup('env', 'HOME') }}/rust && ./x.py build"
-#   # changed_when: false
-#   tags:
-#     - install
-#     - languages
-#     - rust
-
-# - name: "Rust | Install"
-#   become_user: "{{ username }}"
-#   shell: "cd {{ lookup('env', 'HOME') }}/rust && ./x.py install cargo"
-#   # changed_when: false
-#   tags:
-#     - install
-#     - languages
-#     - rust
-
-
-
-
-
-
-
-# - name: Download Rust Installer
-#   get_url:
-#     url: https://sh.rustup.rs
-#     dest: "{{ lookup('env', 'HOME') }}/sh.rustup.rs"
-#     mode: '0755'
-#     force: 'yes'
-#   tags:
-#     - install
-#     - languages
-#     - rust
-
-# - name: Install Rust & Cargo
-#   shell: |
-#     "{{ lookup('env', 'HOME') }}/sh.rustup.rs" -y <<EOF
-#     1
-#     EOF
-#   tags:
-#     - install
-#     - languages
-#     - rust
-
-# - name: Install Rust & Cargo
-#   shell: "{{ lookup('env', 'HOME') }}/sh.rustup.rs | echo '1\n'"
-#   tags:
-#     - install
-#     - languages
-#     - rust
-
-# - name: Install Rust & Cargo
-#   become: true
-#   expect:
-#     command: "{{ lookup('env', 'HOME') }}/sh.rustup.rs -y"
-#     responses:
-#       - '1\r\n'
-#   tags:
-#     - install
-#     - languages
-#     - rust
-
-# - name: Install Rust & Cargo
-#   become: true
-#   become_user: "{{ username }}"
-#   shell: "curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh" -y
-#   tags:
-#     - install
-#     - languages
-#     - rust
-# - name: Add Cargo Environment to ~/.bashrc
-#   ansible.builtin.lineinfile:
-#     dest: ~/.bashrc
-#     line: '[ -f ~/.cargo/env ] && source $HOME/.cargo/env'
-#     insertafter: EOF
-#   tags:
-#     - install
-#     - languages
-#     - rust
-
-# - name: Source .bashrc File
-#   ansible.builtin.shell: source ~/.bashrc
-#   args:
-#     executable: /bin/bash
-#   environment:
-#     HOME: "{{ ansible_env.HOME }}"
-#   tags:
-#     - install
-#     - languages
-#     - rust
+- name: Rust - Add Cargo to PATH in .zshrc
+  become: true
+  become_user: "{{ username }}"
+  lineinfile:
+    path: "{{ ansible_env.HOME }}/.zshrc"
+    line: 'export PATH="$HOME/.cargo/bin:$PATH"'
+    insertafter: EOF
+    create: yes
+  when: rust_check.rc != 0
+  tags:
+    - install
+    - languages
+    - rust

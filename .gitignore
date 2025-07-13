@@ -10,6 +10,7 @@
 *.retry
 logs/
 .vault_pass
+passwd.txt
 host_vars/vault_*
 group_vars/vault_*
 

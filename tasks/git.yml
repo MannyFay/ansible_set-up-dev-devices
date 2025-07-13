@@ -1,13 +1,17 @@
 - name: Git - Link Global Git Configuration File
   become: true
   become_user: "{{ username }}"
-  command: "{{ item }}"
+  file:
+    src: "{{ item.src }}"
+    dest: "{{ item.dest }}"
+    state: link
+    force: yes
   with_items:
-    - ln -s "{{ lookup('env', 'HOME') }}/dotfiles/git/account-config/global" "{{ lookup('env', 'HOME') }}/.gitconfig"
-    - ln -s "{{ lookup('env', 'HOME') }}/dotfiles/git/account-config/personal/github" "{{ personal_gh_directory }}/.gitconfig"
-    - ln -s "{{ lookup('env', 'HOME') }}/dotfiles/git/account-config/personal/gitlab" "{{ personal_gl_directory }}/.gitconfig"
-    - ln -s "{{ lookup('env', 'HOME') }}/dotfiles/git/account-config/personal/gitlab" "{{ work_fitcrew_directory }}/.gitconfig"
-    - ln -s "{{ lookup('env', 'HOME') }}/dotfiles/git/account-config/work/github" "{{ lookup('env', 'HOME') }}/work/vds/github/.gitconfig"
+    - { src: "{{ ansible_env.HOME }}/dotfiles/git/account-config/global", dest: "{{ ansible_env.HOME }}/.gitconfig" }
+    - { src: "{{ ansible_env.HOME }}/dotfiles/git/account-config/personal/github", dest: "{{ personal_gh_directory }}/.gitconfig" }
+    - { src: "{{ ansible_env.HOME }}/dotfiles/git/account-config/personal/gitlab", dest: "{{ personal_gl_directory }}/.gitconfig" }
+    - { src: "{{ ansible_env.HOME }}/dotfiles/git/account-config/personal/gitlab", dest: "{{ work_fitcrew_directory }}/.gitconfig" }
+    - { src: "{{ ansible_env.HOME }}/dotfiles/git/account-config/work/github", dest: "{{ ansible_env.HOME }}/work/vds/github/.gitconfig" }
   tags:
     - install
     - core

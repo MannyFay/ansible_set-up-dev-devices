@@ -1,0 +1,84 @@
+---
+# Windows Chocolatey Package Management Tasks
+- name: Chocolatey - Check if Chocolatey is installed
+  win_shell: |
+    if (Get-Command choco -ErrorAction SilentlyContinue) {
+      Write-Output "installed"
+    } else {
+      Write-Output "not_installed"
+    }
+  register: choco_check
+  changed_when: false
+
+- name: Chocolatey - Install Chocolatey
+  win_shell: |
+    Set-ExecutionPolicy Bypass -Scope Process -Force
+    [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072
+    iex ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
+  when: choco_check.stdout.strip() == "not_installed"
+
+- name: Chocolatey - Update Chocolatey
+  win_chocolatey:
+    name: chocolatey
+    state: latest
+  when: choco_check.stdout.strip() == "installed"
+
+- name: Chocolatey - Install core development packages
+  win_chocolatey:
+    name: "{{ item }}"
+    state: present
+  loop:
+    - git
+    - 7zip
+    - curl
+    - wget
+    - vim
+    - notepadplusplus
+    - vscode
+    - firefox
+    - googlechrome
+    - putty
+    - winscp
+  tags:
+    - install
+    - core
+    - chocolatey
+
+- name: Chocolatey - Install development tools
+  win_chocolatey:
+    name: "{{ item }}"
+    state: present
+  loop:
+    - nodejs
+    - python
+    - golang
+    - rustup.install
+    - jdk8
+    - php
+    - composer
+    - docker-desktop
+  tags:
+    - install
+    - languages
+    - chocolatey
+
+- name: Chocolatey - Install Windows Terminal and PowerShell Core
+  win_chocolatey:
+    name: "{{ item }}"
+    state: present
+  loop:
+    - microsoft-windows-terminal
+    - powershell-core
+  tags:
+    - install
+    - tools
+    - chocolatey
+
+- name: Chocolatey - Configure Git (if not already configured)
+  win_shell: |
+    git config --global user.name "{{ developer_name | default('Developer') }}"
+    git config --global user.email "{{ developer_email | default('developer@example.com') }}"
+  ignore_errors: true
+  tags:
+    - configure
+    - git

@@ -1,4 +1,4 @@
-- name: Install Python
+- name: Python - Install
   become: true
   apt:
     name: "{{ item }}"

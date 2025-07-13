@@ -1,0 +1,158 @@
+---
+# Low-Resource Device Profile
+# For devices with < 2GB RAM or < 2 CPU cores
+
+- name: Low Resource - Display resource constraints
+  debug:
+    msg:
+      - "Low-resource device detected"
+      - "RAM: {{ ansible_memtotal_mb | default('unknown') }} MB"
+      - "CPU Cores: {{ ansible_processor_vcpus | default('unknown') }}"
+      - "Applying resource-optimized configuration"
+
+- name: Low Resource - Set minimal language installations
+  set_fact:
+    minimal_languages:
+      debian:
+        - python3
+        - python3-pip
+        - nodejs
+        - npm
+      archlinux:
+        - python
+        - python-pip
+        - nodejs
+        - npm
+      darwin:
+        - python@3.11
+        - node
+      windows:
+        - python
+        - nodejs
+
+- name: Low Resource - Set minimal GUI applications
+  set_fact:
+    minimal_gui_apps:
+      debian:
+        - firefox-esr  # Lighter than full Firefox
+        - code
+      archlinux:
+        - firefox
+        - code
+      darwin:
+        - firefox
+        - visual-studio-code
+      windows:
+        - firefox
+        - vscode
+
+- name: Low Resource - Skip heavy applications
+  set_fact:
+    skip_heavy_apps: true
+    skip_docker: true
+    skip_chrome: true
+    skip_neovim_compile: true
+
+- name: Low Resource - Configure lightweight alternatives
+  set_fact:
+    lightweight_config:
+      terminal: "{{ 'xterm' if ansible_os_family in ['Debian', 'Archlinux'] 
+                   else 'Terminal' if ansible_os_family == 'Darwin'
+                   else 'Windows Terminal' }}"
+      editor: "{{ 'vim' if ansible_os_family != 'Windows' else 'notepad++' }}"
+      browser: "firefox"
+      
+- name: Low Resource - Install minimal package set (Debian/Ubuntu)
+  become: true
+  apt:
+    name: "{{ minimal_languages.debian + (minimal_gui_apps.debian if has_gui else []) }}"
+    state: present
+  when: 
+    - ansible_os_family == "Debian"
+    - is_low_resource | default(false)
+  tags:
+    - install
+    - minimal
+    - low-resource
+
+- name: Low Resource - Install minimal package set (Arch Linux)
+  become: true
+  pacman:
+    name: "{{ minimal_languages.archlinux + (minimal_gui_apps.archlinux if has_gui else []) }}"
+    state: present
+  when: 
+    - ansible_os_family == "Archlinux"
+    - is_low_resource | default(false)
+  tags:
+    - install
+    - minimal
+    - low-resource
+
+- name: Low Resource - Install minimal package set (macOS)
+  homebrew:
+    name: "{{ minimal_languages.darwin }}"
+    state: present
+  when: 
+    - ansible_os_family == "Darwin"
+    - is_low_resource | default(false)
+  tags:
+    - install
+    - minimal
+    - low-resource
+
+- name: Low Resource - Install minimal package set (macOS GUI)
+  homebrew_cask:
+    name: "{{ minimal_gui_apps.darwin }}"
+    state: present
+  when: 
+    - ansible_os_family == "Darwin"
+    - is_low_resource | default(false)
+    - has_gui | default(false)
+  tags:
+    - install
+    - minimal
+    - low-resource
+
+- name: Low Resource - Install minimal package set (Windows)
+  win_chocolatey:
+    name: "{{ minimal_languages.windows + minimal_gui_apps.windows }}"
+    state: present
+  when: 
+    - ansible_os_family == "Windows"
+    - is_low_resource | default(false)
+  tags:
+    - install
+    - minimal
+    - low-resource
+
+- name: Low Resource - Configure swap (Linux only)
+  become: true
+  shell: |
+    if [ ! -f /swapfile ]; then
+      fallocate -l 1G /swapfile
+      chmod 600 /swapfile
+      mkswap /swapfile
+      swapon /swapfile
+      echo '/swapfile none swap sw 0 0' >> /etc/fstab
+    fi
+  when: 
+    - ansible_os_family in ["Debian", "Archlinux"]
+    - is_low_resource | default(false)
+    - ansible_memtotal_mb < 1024
+  tags:
+    - configure
+    - swap
+    - low-resource
+
+- name: Low Resource - Set resource-friendly Git settings
+  shell: |
+    git config --global core.preloadindex true
+    git config --global core.fscache true
+    git config --global gc.auto 256
+  become: true
+  become_user: "{{ username }}"
+  when: is_low_resource | default(false)
+  tags:
+    - configure
+    - git
+    - low-resource

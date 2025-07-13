@@ -1,16 +1,29 @@
 - name: Google Chrome - Download Google Chrome .deb package
   become: true
   get_url:
-    url: https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
-    dest: /tmp/google-chrome-stable_current_amd64.deb
+    url: "https://dl.google.com/linux/direct/google-chrome-stable_current_{{ 'amd64' if ansible_architecture == 'x86_64' else 'arm64' if ansible_architecture == 'aarch64' else ansible_architecture }}.deb"
+    dest: "/tmp/google-chrome-stable_current_{{ 'amd64' if ansible_architecture == 'x86_64' else 'arm64' if ansible_architecture == 'aarch64' else ansible_architecture }}.deb"
+  when: ansible_os_family == "Debian"
   tags:
     - install
     - tools
     - chrome
 
 - name: Google Chrome - Install Google Chrome
+  become: true
   apt:
-    deb: /tmp/google-chrome-stable_current_amd64.deb
+    deb: "/tmp/google-chrome-stable_current_{{ 'amd64' if ansible_architecture == 'x86_64' else 'arm64' if ansible_architecture == 'aarch64' else ansible_architecture }}.deb"
+  when: ansible_os_family == "Debian"
+  tags:
+    - install
+    - tools
+    - chrome
+
+- name: Google Chrome - Install Google Chrome (macOS)
+  homebrew_cask:
+    name: google-chrome
+    state: present
+  when: ansible_os_family == "Darwin"
   tags:
     - install
     - tools

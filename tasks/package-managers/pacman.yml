@@ -1,0 +1,133 @@
+---
+# Arch Linux Pacman Package Management Tasks
+- name: Pacman - Update package database
+  become: true
+  pacman:
+    update_cache: true
+  tags:
+    - install
+    - core
+
+- name: Pacman - Install base development packages
+  become: true
+  pacman:
+    name:
+      - base-devel
+      - git
+      - curl
+      - wget
+      - vim
+      - tmux
+      - zsh
+      - openssh
+      - unzip
+      - zip
+      - htop
+      - tree
+      - bat
+      - fd
+      - ripgrep
+    state: present
+  tags:
+    - install
+    - core
+
+- name: Pacman - Install programming languages
+  become: true
+  pacman:
+    name:
+      - nodejs
+      - npm
+      - python
+      - python-pip
+      - go
+      - rust
+      - jdk-openjdk
+      - php
+      - composer
+    state: present
+  tags:
+    - install
+    - languages
+
+- name: Pacman - Install GUI applications (if GUI available)
+  become: true
+  pacman:
+    name:
+      - i3-wm
+      - i3status
+      - i3lock
+      - dmenu
+      - alacritty
+      - firefox
+      - code
+    state: present
+  when: has_gui | default(false)
+  tags:
+    - install
+    - gui
+
+- name: Pacman - Install Docker
+  become: true
+  pacman:
+    name:
+      - docker
+      - docker-compose
+    state: present
+  tags:
+    - install
+    - docker
+
+- name: Pacman - Enable and start Docker service
+  become: true
+  systemd:
+    name: docker
+    enabled: true
+    state: started
+  tags:
+    - install
+    - docker
+
+- name: Pacman - Add user to docker group
+  become: true
+  user:
+    name: "{{ username }}"
+    groups: docker
+    append: true
+  tags:
+    - install
+    - docker
+
+# AUR Helper installation for additional packages
+- name: AUR - Check if yay is installed
+  command: which yay
+  register: yay_check
+  failed_when: false
+  changed_when: false
+
+- name: AUR - Install yay AUR helper
+  become: true
+  become_user: "{{ username }}"
+  shell: |
+    cd /tmp
+    git clone https://aur.archlinux.org/yay.git
+    cd yay
+    makepkg -si --noconfirm
+  when: yay_check.rc != 0
+  tags:
+    - install
+    - aur
+
+- name: AUR - Install AUR packages for low-resource devices
+  become: true
+  become_user: "{{ username }}"
+  shell: yay -S --noconfirm {{ item }}
+  loop:
+    - google-chrome
+    - visual-studio-code-bin
+    - discord
+    - zoom
+  when: not (is_low_resource | default(false))
+  tags:
+    - install
+    - aur

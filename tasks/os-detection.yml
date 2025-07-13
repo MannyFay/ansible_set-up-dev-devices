@@ -1,0 +1,66 @@
+---
+# OS Detection and Package Manager Abstraction
+- name: OS Detection - Set facts for operating system
+  set_fact:
+    os_family: "{{ ansible_os_family }}"
+    os_distribution: "{{ ansible_distribution | default('Unknown') }}"
+    os_version: "{{ ansible_distribution_version | default('Unknown') }}"
+    architecture: "{{ ansible_architecture }}"
+
+- name: OS Detection - Set package manager and paths
+  set_fact:
+    package_manager: "{{ 'apt' if ansible_os_family == 'Debian' 
+                          else 'pacman' if ansible_os_family == 'Archlinux'
+                          else 'homebrew' if ansible_os_family == 'Darwin'
+                          else 'chocolatey' if ansible_os_family == 'Windows'
+                          else 'unknown' }}"
+    home_directory: "{{ ansible_env.HOME if ansible_os_family != 'Windows' 
+                        else ansible_env.USERPROFILE | default('C:\\Users\\' + ansible_user_id) }}"
+    config_directory: "{{ ansible_env.HOME + '/.config' if ansible_os_family in ['Debian', 'Archlinux']
+                          else ansible_env.HOME + '/Library/Application Support' if ansible_os_family == 'Darwin'
+                          else ansible_env.APPDATA if ansible_os_family == 'Windows'
+                          else ansible_env.HOME + '/.config' }}"
+
+- name: OS Detection - Check for GUI environment (Linux/macOS)
+  shell: |
+    if [ "$XDG_SESSION_TYPE" = "wayland" ] || [ "$XDG_SESSION_TYPE" = "x11" ] || [ -n "$DISPLAY" ]; then
+      echo "gui"
+    elif [ "$(uname)" = "Darwin" ]; then
+      echo "gui"
+    else
+      echo "headless"
+    fi
+  register: gui_check
+  failed_when: false
+  changed_when: false
+  when: ansible_os_family != 'Windows'
+
+- name: OS Detection - Set GUI availability (Windows always has GUI)
+  set_fact:
+    has_gui: true
+  when: ansible_os_family == 'Windows'
+
+- name: OS Detection - Set GUI availability (Linux/macOS)
+  set_fact:
+    has_gui: "{{ gui_check.stdout == 'gui' }}"
+  when: ansible_os_family != 'Windows'
+
+- name: OS Detection - Check for low resource device
+  set_fact:
+    is_low_resource: "{{ ansible_memtotal_mb < 2048 or ansible_processor_vcpus < 2 }}"
+  when: ansible_memtotal_mb is defined
+
+- name: OS Detection - Display detected configuration
+  debug:
+    msg:
+      - "Operating System: {{ os_family }} / {{ os_distribution }} {{ os_version }}"
+      - "Architecture: {{ architecture }}"
+      - "Package Manager: {{ package_manager }}"
+      - "Home Directory: {{ home_directory }}"
+      - "GUI Available: {{ has_gui }}"
+      - "Low Resource Device: {{ is_low_resource | default('unknown') }}"
+
+- name: OS Detection - Fail if unsupported OS
+  fail:
+    msg: "Unsupported operating system: {{ os_family }}"
+  when: package_manager == 'unknown'

@@ -1,0 +1,66 @@
+---
+# Debian/Ubuntu APT Package Management Tasks
+- name: APT - Install core utilities
+  include_tasks: ../core-utilities.yml
+  tags:
+    - install
+    - core
+
+- name: APT - Install programming languages
+  become: true
+  apt:
+    name:
+      - python3
+      - python3-pip
+      - nodejs
+      - npm
+      - golang-go
+      - default-jdk
+      - php
+      - composer
+      - rustc
+      - cargo
+    state: present
+  tags:
+    - install
+    - languages
+
+- name: APT - Install development tools
+  become: true
+  apt:
+    name:
+      - git
+      - tmux
+      - zsh
+      - vim
+      - curl
+      - wget
+      - tree
+      - htop
+      - unzip
+      - zip
+    state: present
+  tags:
+    - install
+    - tools
+
+- name: APT - Install GUI applications (if GUI available)
+  become: true
+  apt:
+    name:
+      - i3
+      - i3status
+      - i3lock
+      - dmenu
+      - firefox-esr
+    state: present
+  when: has_gui | default(false)
+  tags:
+    - install
+    - gui
+
+- name: APT - Configure additional repositories
+  include_tasks: ../nodejs.yml
+  tags:
+    - install
+    - repositories

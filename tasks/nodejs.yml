@@ -1,11 +1,11 @@
-- name: Download Node.js
+- name: Node.js - Download
   become: true
   command: sh -c "curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash"
   tags:
     - install
     - node.js
 
-- name: Install Node.js
+- name: Node.js - Install
   become: true
   command: apt-get install -y nodejs
   tags:
@@ -13,7 +13,7 @@
     - node.js
 
 
-- name: Install NVM
+- name: NVM - Install
   #become: true
   become_user: "{{ username }}"
   command: sh -c "curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash"
@@ -21,7 +21,7 @@
     - install
     - node.js
 
-- name: Install Yarn globally
+- name: Yarn - Install globally
   become: true
   npm:
     name: yarn

@@ -1,0 +1,125 @@
+---
+# macOS Homebrew Package Management Tasks
+- name: Homebrew - Check if Homebrew is installed
+  command: which brew
+  register: brew_check
+  failed_when: false
+  changed_when: false
+
+- name: Homebrew - Install Homebrew
+  shell: /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+  when: brew_check.rc != 0
+  become: true
+  become_user: "{{ username }}"
+
+- name: Homebrew - Add Homebrew to PATH
+  lineinfile:
+    path: "{{ home_directory }}/.zshrc"
+    line: 'eval "$(/opt/homebrew/bin/brew shellenv)"'
+    create: true
+  when: ansible_architecture == "arm64"  # Apple Silicon
+
+- name: Homebrew - Add Homebrew to PATH (Intel)
+  lineinfile:
+    path: "{{ home_directory }}/.zshrc"
+    line: 'eval "$(/usr/local/bin/brew shellenv)"'
+    create: true
+  when: ansible_architecture == "x86_64"  # Intel Mac
+
+- name: Homebrew - Update Homebrew
+  homebrew:
+    update_homebrew: true
+
+- name: Homebrew - Install core development packages
+  homebrew:
+    name:
+      - git
+      - curl
+      - wget
+      - vim
+      - tmux
+      - zsh
+      - tree
+      - htop
+      - bat
+      - fd
+      - ripgrep
+      - fzf
+      - jq
+      - unzip
+    state: present
+  tags:
+    - install
+    - core
+
+- name: Homebrew - Install programming languages
+  homebrew:
+    name:
+      - node
+      - python@3.11
+      - go
+      - rust
+      - openjdk
+      - php
+      - composer
+    state: present
+  tags:
+    - install
+    - languages
+
+- name: Homebrew - Install GUI applications via Cask
+  homebrew_cask:
+    name:
+      - alacritty
+      - google-chrome
+      - firefox
+      - visual-studio-code
+      - docker
+      - iterm2
+      - discord
+      - zoom
+    state: present
+  tags:
+    - install
+    - gui
+
+- name: Homebrew - Install window management (alternative to i3)
+  homebrew_cask:
+    name:
+      - rectangle
+      - aerospace
+    state: present
+  tags:
+    - install
+    - wm
+
+- name: Homebrew - Install fonts
+  homebrew_cask:
+    name:
+      - font-fira-code
+      - font-jetbrains-mono
+      - font-source-code-pro
+    state: present
+  tags:
+    - install
+    - fonts
+
+- name: Homebrew - Configure Git
+  shell: |
+    git config --global user.name "{{ developer_name | default('Developer') }}"
+    git config --global user.email "{{ developer_email | default('developer@example.com') }}"
+  become: true
+  become_user: "{{ username }}"
+  ignore_errors: true
+  tags:
+    - configure
+    - git
+
+- name: Homebrew - Start Docker service
+  shell: open -a Docker
+  become: true
+  become_user: "{{ username }}"
+  ignore_errors: true
+  tags:
+    - install
+    - docker

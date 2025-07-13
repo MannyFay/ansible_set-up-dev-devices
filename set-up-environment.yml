@@ -1,49 +1,200 @@
 ---
-- hosts: localhost
-  become: true
+- hosts: all
+  gather_facts: true
   vars:
+    # Cross-platform paths and variables
     ssh_key_source: "./.ssh/personal-github"
-    localhost_ssh_key_destination: "{{ lookup('env', 'HOME') }}/.ssh/personal-github"
+    localhost_ssh_key_destination: "{{ home_directory }}/.ssh/personal-github"
     intelephense_licence_source: "./intelephense/licence.txt"
-    intelephense_licence_destination: "{{ lookup('env', 'HOME') }}/intelephense"
+    intelephense_licence_destination: "{{ home_directory }}/intelephense"
     font_source: "./.fonts"
-    font_destination: "{{ lookup('env', 'HOME') }}/.fonts"
-    personal_gh_directory: "{{ lookup('env', 'HOME') }}/personal/github"
-    personal_gl_directory: "{{ lookup('env', 'HOME') }}/personal/gitlab"
-    work_fitcrew_directory: "{{ lookup('env', 'HOME')}}/work/fitcrew/gitlab"
-    username: "<your-username>"
+    font_destination: "{{ home_directory }}/.fonts"
+    personal_gh_directory: "{{ home_directory }}/personal/github"
+    personal_gl_directory: "{{ home_directory }}/personal/gitlab"
+    work_fitcrew_directory: "{{ home_directory }}/work/fitcrew/gitlab"
+    username: "{{ ansible_env.USER if ansible_os_family != 'Windows' else ansible_user_id }}"
+    
+    # Global developer settings
+    developer_name: "{{ developer_name | default('Developer') }}"
+    developer_email: "{{ developer_email | default('developer@example.com') }}"
 
   pre_tasks:
-    - name: Update APT Package Manager
+    # Essential: OS Detection and environment setup
+    - name: Pre-task - OS Detection and Package Manager Setup
+      include_tasks: tasks/os-detection.yml
+      tags: always
+
+    # OS-specific package manager updates
+    - name: Pre-task - Update APT Package Manager (Debian/Ubuntu)
       become: true
       apt:
         force_apt_get: true
         update_cache: true
         state: present
+      when: ansible_os_family == "Debian"
+      tags:
+        - install
+        - core
+
+    - name: Pre-task - Update Pacman Package Database (Arch Linux)
+      become: true
+      pacman:
+        update_cache: true
+      when: ansible_os_family == "Archlinux"
       tags:
         - install
         - core
 
   tasks:
-    - include_tasks: tasks/filesystem.yml
-    - include_tasks: tasks/ssh.yml
-    - include_tasks: tasks/core-utilities.yml
-    - include_tasks: tasks/eza.yml
-    - include_tasks: tasks/personal.yml
-    - include_tasks: tasks/git.yml
-    - include_tasks: tasks/tmux.yml
-    - include_tasks: tasks/languages/php.yml
-    - include_tasks: tasks/languages/clanguages.yml
-    - include_tasks: tasks/languages/python.yml
-    - include_tasks: tasks/languages/java.yml
-    - include_tasks: tasks/languages/go.yml
-    # - include_tasks: tasks/languages/rust.yml   # A newer version is provided by the Rust installer.
-    - include_tasks: tasks/i3wm.yml
-    - include_tasks: tasks/neovim.yml
-    - include_tasks: tasks/nodejs.yml
-    - include_tasks: tasks/alacritty-terminal.yml
-    - include_tasks: tasks/languages/typescript.yml
-    - include_tasks: tasks/google-chrome.yml
-    - include_tasks: tasks/docker.yml
-    - include_tasks: tasks/zsh.yml
+    # Apply low-resource profile if detected
+    - name: Apply Low Resource Profile
+      include_tasks: tasks/profiles/low-resource.yml
+      when: is_low_resource | default(false)
+      tags:
+        - profile
+        - low-resource
+
+    # Core system setup (cross-platform)
+    - name: Core - Filesystem Setup
+      include_tasks: tasks/filesystem.yml
+      when: ansible_os_family != "Windows"
+      tags:
+        - core
+        - filesystem
+
+    - name: Core - SSH Configuration
+      include_tasks: tasks/ssh.yml
+      when: ansible_os_family != "Windows"
+      tags:
+        - core
+        - ssh
+
+    # Package manager specific installations
+    - name: Package Manager - Debian/Ubuntu (APT)
+      include_tasks: tasks/package-managers/apt.yml
+      when: 
+        - ansible_os_family == "Debian"
+        - not (is_low_resource | default(false))
+      tags:
+        - install
+        - packages
+
+    - name: Package Manager - Arch Linux (Pacman)
+      include_tasks: tasks/package-managers/pacman.yml
+      when: 
+        - ansible_os_family == "Archlinux"
+        - not (is_low_resource | default(false))
+      tags:
+        - install
+        - packages
+
+    - name: Package Manager - macOS (Homebrew)
+      include_tasks: tasks/package-managers/homebrew.yml
+      when: 
+        - ansible_os_family == "Darwin"
+        - not (is_low_resource | default(false))
+      tags:
+        - install
+        - packages
+
+    - name: Package Manager - Windows (Chocolatey)
+      include_tasks: tasks/package-managers/chocolatey.yml
+      when: 
+        - ansible_os_family == "Windows"
+        - not (is_low_resource | default(false))
+      tags:
+        - install
+        - packages
+
+    # Legacy task compatibility (Debian/Ubuntu only)
+    - name: Legacy - EZA Installation
+      include_tasks: tasks/eza.yml
+      when: ansible_os_family == "Debian" and not (is_low_resource | default(false))
+      tags:
+        - legacy
+        - tools
+
+    - name: Legacy - Personal Repositories
+      include_tasks: tasks/personal.yml
+      when: ansible_os_family != "Windows" and not (is_low_resource | default(false))
+      tags:
+        - legacy
+        - git
+
+    - name: Legacy - Git Configuration
+      include_tasks: tasks/git.yml
+      when: ansible_os_family != "Windows" and not (is_low_resource | default(false))
+      tags:
+        - legacy
+        - git
+
+    - name: Legacy - Tmux Configuration
+      include_tasks: tasks/tmux.yml
+      when: ansible_os_family != "Windows" and not (is_low_resource | default(false))
+      tags:
+        - legacy
+        - tools
+
+    # Programming languages (cross-platform via package managers)
+    - name: Languages - Rust Installation
+      include_tasks: tasks/languages/rust.yml
+      when: not (is_low_resource | default(false))
+      tags:
+        - languages
+        - rust
+
+    # GUI Applications (only if GUI is available)
+    - name: GUI - i3 Window Manager (Linux only)
+      include_tasks: tasks/i3wm.yml
+      when: 
+        - ansible_os_family in ["Debian", "Archlinux"]
+        - has_gui | default(false)
+        - not (is_low_resource | default(false))
+      tags:
+        - gui
+        - wm
+
+    - name: GUI - Neovim Editor
+      include_tasks: tasks/neovim.yml
+      when: not (is_low_resource | default(false))
+      tags:
+        - gui
+        - editor
+
+    - name: GUI - Alacritty Terminal
+      include_tasks: tasks/alacritty-terminal.yml
+      when: 
+        - has_gui | default(false)
+        - not (is_low_resource | default(false))
+      tags:
+        - gui
+        - terminal
+
+    - name: GUI - Google Chrome Browser
+      include_tasks: tasks/google-chrome.yml
+      when: 
+        - has_gui | default(false)
+        - not (is_low_resource | default(false))
+        - not (skip_chrome | default(false))
+      tags:
+        - gui
+        - browser
+
+    # Development tools
+    - name: Development - Docker
+      include_tasks: tasks/docker.yml
+      when: 
+        - ansible_os_family != "Windows"  # Docker Desktop handled by package managers
+        - not (is_low_resource | default(false))
+        - not (skip_docker | default(false))
+      tags:
+        - development
+        - docker
+
+    - name: Development - ZSH Shell
+      include_tasks: tasks/zsh.yml
+      when: ansible_os_family != "Windows"
+      tags:
+        - development
+        - shell
 

@@ -1,6 +1,16 @@
 - name: Docker - Uninstall maybe existing Docker environment
   become: true
-  shell: "for pkg in docker.io docker-doc docker-compose docker-compose-v2 podman-docker containerd runc; do sudo apt-get remove $pkg; done"
+  apt:
+    name:
+      - docker.io
+      - docker-doc
+      - docker-compose
+      - docker-compose-v2
+      - podman-docker
+      - containerd
+      - runc
+    state: absent
+    purge: yes
   tags:
     - install
     - tools
@@ -17,16 +27,8 @@
     - tools
     - docker
 
-- name: Docker - Add Docker GPG APT Key
-  apt_key:
-    url: https://download.docker.com/linux/ubuntu/gpg
-    state: present
-  tags:
-    - install
-    - tools
-    - docker
-
 - name: Docker - Create Directory for Docker GPG Key
+  become: true
   file:
     path: /etc/apt/keyrings
     state: directory
@@ -37,17 +39,10 @@
     - docker
 
 - name: Docker - Download Docker GPG Key
+  become: true
   get_url:
     url: https://download.docker.com/linux/ubuntu/gpg
     dest: /etc/apt/keyrings/docker.asc
-  tags:
-    - install
-    - tools
-    - docker
-
-- name: Docker - Set Permissions for Docker GPG Key
-  file:
-    path: /etc/apt/keyrings/docker.asc
     mode: '0644'
   tags:
     - install
@@ -55,8 +50,9 @@
     - docker
 
 - name: Docker - Add Docker Repository to APT Resources
+  become: true
   apt_repository:
-    repo: deb https://download.docker.com/linux/ubuntu jammy stable
+    repo: "deb [arch={{ ansible_architecture }} signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu {{ ansible_distribution_release }} stable"
     state: present
   tags:
     - install
@@ -75,8 +71,14 @@
     - docker
 
 - name: Docker - Install Docker Packages
+  become: true
   apt:
-    name: ["docker-ce", "docker-ce-cli", "containerd.io", "docker-buildx-plugin", "docker-compose-plugin"]
+    name:
+      - docker-ce
+      - docker-ce-cli
+      - containerd.io
+      - docker-buildx-plugin
+      - docker-compose-plugin
     state: present
   tags:
     - install
@@ -84,6 +86,7 @@
     - docker
 
 - name: Docker - Install Docker Module for Python
+  become: true
   pip:
     name: docker
   tags:
@@ -103,6 +106,7 @@
     - docker
 
 - name: Docker - Create Docker Group
+  become: true
   group:
     name: docker
     state: present
@@ -112,6 +116,7 @@
     - docker
 
 - name: Docker - Add User to Docker Group
+  become: true
   user:
     name: "{{ username }}"
     groups: docker
